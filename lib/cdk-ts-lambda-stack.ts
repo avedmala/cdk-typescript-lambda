@@ -20,6 +20,7 @@ import * as cdk from "@aws-cdk/core";
 import { Tags } from "@aws-cdk/core";
 import { Lambda, LambdaProps } from "../constructs/Lambda";
 import { Config } from "./config";
+import { DatadogLambda } from "datadog-cdk-constructs-v2";
 
 export class CdkTsLambdaStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
@@ -33,6 +34,21 @@ export class CdkTsLambdaStack extends cdk.Stack {
 
       Tags.of(this).add("APP_NAME", "CDK_SAMPLE");
       Tags.of(this).add("ENVIRONMENT", process.env.ENV_NAME);
+      Tags.of(this).add("team", "serverless");
+
+      const datadogLambda = new DatadogLambda(this, "DatadogLambda", {
+        nodeLayerVersion: 125,
+        extensionLayerVersion: 81,
+        site: "<DATADOG_SITE>",
+        apiKeySecretArn: "<DATADOG_API_KEY_SECRET_ARN>",
+        enableTracing: true,
+        enablePayloads: true
+      });
+
+      datadogLambda.addLambdaFunctions([
+        this.addAdditionFunction(config),
+        this.addMultiplicationFunction(config)
+      ]);
     } else {
       throw new Error("ENV_NAME environment variable is mandatory.");
     }
@@ -47,7 +63,7 @@ export class CdkTsLambdaStack extends cdk.Stack {
       functionRoleName: config.getadditionFuncRoleName(),
     };
 
-    new Lambda(this, config.getadditionFuncName(), lambdaProps);
+    return new Lambda(this, config.getadditionFuncName(), lambdaProps);
   }
 
   private addMultiplicationFunction(config: Config) {
@@ -59,6 +75,6 @@ export class CdkTsLambdaStack extends cdk.Stack {
       functionRoleName: config.getmultiplyFuncRoleName(),
     };
 
-    new Lambda(this, config.getmultiplyFuncName(), lambdaProps);
+    return new Lambda(this, config.getmultiplyFuncName(), lambdaProps);
   }
 }
